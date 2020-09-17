@@ -10,12 +10,30 @@ namespace postgres_odbc_csharp_cli
     {
 
         private string _connString = "DSN=CockroachDB;Trusted_Connection=Yes";
+        private string _extraConnStringOptionsForSsl = ";sslmode=verify-ca;pqopt={sslrootcert=/Users/jimhatcher/local_certs/ca.crt sslcert=/Users/jimhatcher/local_certs/node.crt sslkey=/Users/jimhatcher/local_certs/node.key}";
+        private bool _runInSecureMode = false;
 
         private Random random = new Random((int)DateTime.Now.Ticks);
 
+        private string GetConnectionString()
+        {
+            if (_runInSecureMode)
+            {
+                return _connString + _extraConnStringOptionsForSsl;
+            }
+            else
+            {
+                return _connString;
+            }
+        }
 
         public void Run()
         {
+
+
+            Console.WriteLine("=============================================");
+            Console.WriteLine("Starting TESTS in " + (_runInSecureMode ? "SECURE" : "INSECURE") + " mode");
+            Console.WriteLine("=============================================");
 
             int testNumber = 1;
 
@@ -41,18 +59,24 @@ namespace postgres_odbc_csharp_cli
         {
 
             Dictionary<string, string> connStrings = new Dictionary<string, string> {
-                { "DSN=CockroachDB",                                                                              "DSN with no authentication options given" },
-                { "DSN=CockroachDB;Trusted_Connection=Yes",                                                       "DSN with trusted connection" },
-                { "DSN=CockroachDB;Uid=;Pwd=",                                                                    "DSN with blank username/password" },
-                { "DSN=CockroachDB;Uid=jimhatcher;Pwd=",                                                          "DSN with username specified but a blank password" },
-                { "Driver={PostgreSQL Driver};Server=localhost;Port=26257;Database=test;Trusted_Connection=Yes;", "DSN-less with trusted connection" },
-                { "Driver={PostgreSQL Driver};Server=localhost;Port=26257;Database=test;Uid=;Pwd=;",              "DSN-less with blank username/password" },
+                    { "DSN=CockroachDB",                                                                              "DSN with no authentication options given" },
+                    { "DSN=CockroachDB;Trusted_Connection=Yes",                                                       "DSN with trusted connection" },
+                    { "DSN=CockroachDB;Uid=;Pwd=",                                                                    "DSN with blank username/password" },
+                    { "DSN=CockroachDB;Uid=jimhatcher;Pwd=",                                                          "DSN with username specified but a blank password" },
+                    { "Driver={PostgreSQL Driver};Server=localhost;Port=26257;Database=test;Trusted_Connection=Yes;", "DSN-less with trusted connection" },
+                    { "Driver={PostgreSQL Driver};Server=localhost;Port=26257;Database=test;Uid=;Pwd=;",              "DSN-less with blank username/password" },
             };
 
             foreach(KeyValuePair<string, string> kvp in connStrings)
             {
                 string connStringValue = kvp.Key;
                 string connStringDescription = kvp.Value;
+
+                if (_runInSecureMode)
+                {
+                    //connStringValue += ";SSL CACert=/Users/jimhatcher/local_certs/ca.crt;SSL Cert=/Users/jimhatcher/local_certs/node.crt;Key=/Users/jimhatcher/local_certs/node.key;Mode=smVerifyFull";
+                    connStringValue += _extraConnStringOptionsForSsl;
+                }
 
                 Console.WriteLine("Attempting connection ...");
                 Console.WriteLine("Connection String: " + connStringValue);
@@ -85,7 +109,7 @@ namespace postgres_odbc_csharp_cli
         private void ReadData()
         {
 
-            OdbcConnection connection = new OdbcConnection(_connString);
+            OdbcConnection connection = new OdbcConnection(GetConnectionString());
 
             try
             {
@@ -167,7 +191,7 @@ namespace postgres_odbc_csharp_cli
         private void WriteData(int customerID, string name)
         {
 
-            OdbcConnection connection = new OdbcConnection(_connString);
+            OdbcConnection connection = new OdbcConnection(GetConnectionString());
 
             try
             {
@@ -242,7 +266,7 @@ namespace postgres_odbc_csharp_cli
 
             int maxId = Int32.MinValue;
 
-            OdbcConnection connection = new OdbcConnection(_connString);
+            OdbcConnection connection = new OdbcConnection(GetConnectionString());
 
             try
             {
